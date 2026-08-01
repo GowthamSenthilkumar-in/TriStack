@@ -298,21 +298,35 @@ export const db = {
   }
 };
 
-// ---- Seed default demo accounts if the DB is empty -------------------
-// Runs once at boot. Render's free tier disk isn't persistent, so
-// db.json can vanish on any restart — this guarantees the demo
-// logins always work again after that happens.
-if (state.users.length === 0) {
-  const defaults: { id: string; email: string; name: string; role: User['role']; department: string; password: string }[] = [
-    { id: 'user_student_1', email: 'student@gmail.com', name: 'Student User', role: 'student', department: 'Computer Science and Engineering', password: '12345' },
-    { id: 'user_staff_1',   email: 'staff@gmail.com',   name: 'Faculty Staff', role: 'staff',   department: 'Computer Science and Engineering', password: '12345' },
-    { id: 'user_admin_1',   email: 'admin@gmail.com',   name: 'System Admin',  role: 'admin',    department: 'Office of Academics',              password: '12345' },
-  ];
-  for (const d of defaults) {
-    const user = { id: d.id, email: d.email, name: d.name, role: d.role, department: d.department, createdAt: new Date().toISOString() } as User;
+// ---- Ensure default demo accounts exist with correct credentials -----
+// Runs on every boot (not just when the DB is empty) so it can repair
+// stale/broken credential entries left over from earlier bugs, not just
+// create missing users from scratch.
+const DEFAULT_ACCOUNTS: { id: string; email: string; name: string; role: User['role']; department: string; password: string }[] = [
+  { id: 'user_student_1', email: 'student@gmail.com', name: 'Student User', role: 'student', department: 'Computer Science and Engineering', password: '12345' },
+  { id: 'user_staff_1',   email: 'staff@gmail.com',   name: 'Faculty Staff', role: 'staff',   department: 'Computer Science and Engineering', password: '12345' },
+  { id: 'user_admin_1',   email: 'admin@gmail.com',   name: 'System Admin',  role: 'admin',    department: 'Office of Academics',              password: '12345' },
+];
+
+let didRepair = false;
+for (const d of DEFAULT_ACCOUNTS) {
+  const key = credKey(d.email);
+  let user = state.users.find((u) => u.email.trim().toLowerCase() === key);
+
+  if (!user) {
+    user = { id: d.id, email: d.email, name: d.name, role: d.role, department: d.department, createdAt: new Date().toISOString() } as User;
     state.users.push(user);
-    state.credentials[credKey(user.email)] = hashPassword(d.password);
+    didRepair = true;
+    console.log(`[db] Created missing default user: ${d.email}`);
   }
+
+  const hasWorkingCreds = !!state.credentials[key];
+  if (!hasWorkingCreds) {
+    state.credentials[key] = hashPassword(d.password);
+    didRepair = true;
+    console.log(`[db] Repaired credentials for: ${d.email}`);
+  }
+}
+if (didRepair) {
   persist();
-  console.log('[db] Seeded default demo users (student, staff, admin).');
 }

@@ -146,7 +146,10 @@ const AppContent: React.FC = () => {
                 <StudentDigiLockerVault onViewCert={(id) => setViewingCertId(id)} />
               )}
               {activePath === '/student/status' && (
-                <StudentVerificationStatus onViewCert={(id) => setViewingCertId(id)} />
+                <StudentDigiLockerVault
+  onViewCertDetails={(id) => setViewingCertId(id)}
+  onNavigateToUpload={() => handleNavigate('/student/upload')}
+/>
               )}
               {activePath === '/student/notifications' && <StudentNotifications />}
               {activePath === '/student/profile' && <StudentProfile />}

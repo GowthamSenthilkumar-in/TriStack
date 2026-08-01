@@ -287,3 +287,21 @@ verifyCredentials(email: string, password: string): User | null {
     return state.auditLogs.slice().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 };
+// ---- Seed default demo accounts if the DB is empty -------------------
+// Runs once at boot. Render's free tier disk isn't persistent, so
+// db.json can vanish on any restart — this guarantees the demo
+// logins always work again after that happens.
+if (state.users.length === 0) {
+  const defaults: { id: string; email: string; name: string; role: User['role']; department: string; password: string }[] = [
+    { id: 'user_student_1', email: 'student@gmail.com', name: 'Student User', role: 'student', department: 'Computer Science and Engineering', password: '12345' },
+    { id: 'user_staff_1',   email: 'staff@gmail.com',   name: 'Faculty Staff', role: 'staff',   department: 'Computer Science and Engineering', password: '12345' },
+    { id: 'user_admin_1',   email: 'admin@gmail.com',   name: 'System Admin',  role: 'admin',    department: 'Office of Academics',              password: '12345' },
+  ];
+  for (const d of defaults) {
+    const user = { id: d.id, email: d.email, name: d.name, role: d.role, department: d.department, createdAt: new Date().toISOString() } as User;
+    state.users.push(user);
+    state.credentials[user.id] = hashPassword(d.password);
+  }
+  persist();
+  console.log('[db] Seeded default demo users (student, staff, admin).');
+}

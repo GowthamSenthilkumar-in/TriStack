@@ -139,13 +139,13 @@ export const db = {
     return state.users.length < before;
   },
  
-  verifyCredentials(email: string, password: string): User | null {
-    const user = this.getUserByEmail(email);
-    if (!user) return null;
-    const stored = state.credentials[user.id];
-    if (!stored) return null;
-    return verifyPassword(password, stored) ? user : null;
-  },
+verifyCredentials(email: string, password: string): User | null {
+  const user = this.getUserByEmail(email);
+  if (!user) return null;
+  const stored = state.credentials[email];   // ← changed from user.id to email
+  if (!stored) return null;
+  return verifyPassword(password, stored) ? user : null;
+},
  
   // ---------------- Certificates -----------------
   getCertificates(filter: { studentId?: string; status?: string } = {}): CertificateItem[] {

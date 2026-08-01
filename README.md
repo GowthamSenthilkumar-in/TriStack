@@ -1,20 +1,81 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🎓 CertifyX
 
-# Run and deploy your AI Studio app
+A Digital Certificate Management and Verification System for educational institutions. CertifyX enables students to request and download certificates, while staff can generate, issue, and verify certificates securely using unique Certificate IDs and QR codes.
 
-This contains everything you need to run your app locally.
+## 🌐 Live Demo
 
-View your app in AI Studio: https://ai.studio/apps/7abb7534-e784-4801-ba20-e560ea010e8f
+**Website:** https://certifyx.onrender.com/
 
-## Run Locally
+## 📂 GitHub Repository
 
-**Prerequisites:**  Node.js
+**Repository:** https://github.com/GowthamSenthilkumar-in/TriStack 
 
+## ✨ Features
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- Student Dashboard
+- Staff Dashboard
+- Certificate Generation
+- Certificate Verification
+- QR Code Generation
+- Download Certificates
+- Secure Digital Certificate Management
+
+## 🛠️ Technologies Used
+
+- React
+- TypeScript
+- Express.js
+- Node.js
+- Vite
+- Tailwind CSS
+- QRCode
+- Render
+
+## 🚀 Run Locally
+
+### Prerequisites
+
+- Node.js
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/Vishnuvenkat-01/certifyx.git
+```
+
+2. Navigate to the project folder
+
+```bash
+cd certifyx
+```
+
+3. Install dependencies
+
+```bash
+npm install
+```
+
+4. Start the development server
+
+```bash
+npm run dev
+```
+
+5. Open your browser and visit:
+
+```
+http://localhost:3000
+```
+
+## 📌 Project Objective
+
+To simplify certificate generation, issuance, and verification through a secure, paperless digital platform.
+
+## 👥 Team
+
+Developed as a Hackathon Project.
+
+---
+⭐ If you like this project, consider giving it a star on GitHub!

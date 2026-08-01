@@ -1,393 +1,289 @@
 import fs from 'fs';
 import path from 'path';
-import { User, CertificateItem, CertificateRequest, NotificationItem, AuditLogItem } from '../src/types';
-
-interface DatabaseSchema {
+import crypto from 'crypto';
+import type { CertificateItem, CertificateRequest, User } from '../src/types';
+ 
+interface Notification {
+  id: string;
+  userId: string;
+  userRole: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  actionLink?: string;
+  createdAt: string;
+}
+ 
+interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  message: string;
+  timestamp: string;
+}
+ 
+interface DbShape {
   users: User[];
+  credentials: Record<string, string>; // userId -> salt:hash
   certificates: CertificateItem[];
   requests: CertificateRequest[];
-  notifications: NotificationItem[];
-  auditLogs: AuditLogItem[];
-  credentials: Record<string, string>; // email -> password
+  notifications: Notification[];
+  auditLogs: AuditLog[];
 }
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'certifyx.json');
-
-const defaultUsers: User[] = [
-  {
-    id: 'user_student_1',
-    email: 'student@gmail.com',
-    name: 'Student User',
-    role: 'student',
-    department: 'Computer Science and Engineering',
-    registerNumber: '7376241CS108',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'user_staff_1',
-    email: 'staff@gmail.com',
-    name: 'Faculty Staff',
-    role: 'staff',
-    department: 'Computer Science and Engineering',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'user_admin_1',
-    email: 'admin@gmail.com',
-    name: 'System Admin',
-    role: 'admin',
-    department: 'Office of Academics',
-    createdAt: new Date().toISOString()
-  }
-];
-
-const defaultCredentials: Record<string, string> = {
-  'student@gmail.com': '12345',
-  'staff@gmail.com': '12345',
-  'admin@gmail.com': '12345'
-};
-
-class DBManager {
-  private data: DatabaseSchema;
-
-  constructor() {
-    this.data = this.loadData();
-  }
-
-  private loadData(): DatabaseSchema {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+ 
+// ---- Storage location -----------------------------------------------
+// Allow overriding via env var so you can point this at a Render
+// Persistent Disk mount path (e.g. DB_DIR=/data) without touching code.
+const DB_DIR = process.env.DB_DIR || path.join(process.cwd(), 'data');
+const DB_FILE = path.join(DB_DIR, 'db.json');
+const TMP_FILE = path.join(DB_DIR, 'db.json.tmp');
+ 
+function emptyDb(): DbShape {
+  return { users: [], credentials: {}, certificates: [], requests: [], notifications: [], auditLogs: [] };
+}
+ 
+function loadDb(): DbShape {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      if (raw.trim().length > 0) {
+        const parsed = JSON.parse(raw);
+        // Backfill any keys that might be missing from an older file shape
+        return { ...emptyDb(), ...parsed };
       }
-
+    }
+  } catch (err) {
+    console.error('[db] Failed to read existing db.json, starting fresh. Error:', err);
+    // Preserve the corrupted file for forensics instead of silently losing it
+    try {
       if (fs.existsSync(DB_FILE)) {
-        const fileContent = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(fileContent);
-        return {
-          users: parsed.users || defaultUsers,
-          certificates: parsed.certificates || [],
-          requests: parsed.requests || [],
-          notifications: parsed.notifications || [],
-          auditLogs: parsed.auditLogs || [],
-          credentials: { ...defaultCredentials, ...(parsed.credentials || {}) }
-        };
+        fs.copyFileSync(DB_FILE, `${DB_FILE}.corrupt-${Date.now()}.bak`);
       }
-    } catch (err) {
-      console.error('Error reading database file:', err);
-    }
-
-    // Default state: Vault starts empty!
-    const initialData: DatabaseSchema = {
-      users: defaultUsers,
-      certificates: [], // Empty state on first use
-      requests: [],
-      notifications: [],
-      auditLogs: [
-        {
-          id: 'log_init',
-          userId: 'user_admin_1',
-          userName: 'System Admin',
-          userRole: 'admin',
-          action: 'SYSTEM_INITIALIZED',
-          details: 'CertifyX database initialized with empty vault and default institutional accounts.',
-          timestamp: new Date().toISOString()
-        }
-      ],
-      credentials: defaultCredentials
-    };
-
-    this.saveData(initialData);
-    return initialData;
-  }
-
-  private saveData(dataToSave?: DatabaseSchema) {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      const content = JSON.stringify(dataToSave || this.data, null, 2);
-      fs.writeFileSync(DB_FILE, content, 'utf-8');
-    } catch (err) {
-      console.error('Failed to save database file:', err);
+    } catch {
+      /* best effort */
     }
   }
-
-  // --- Users ---
-  getUsers() {
-    return this.data.users;
+  return emptyDb();
+}
+ 
+// In-memory cache, hydrated once from disk at module load time.
+let state: DbShape = loadDb();
+ 
+// Atomic write: write to a temp file then rename over the real file.
+// This means a crash mid-save can never leave db.json half-written.
+function persist() {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+  fs.writeFileSync(TMP_FILE, JSON.stringify(state, null, 2), 'utf-8');
+  fs.renameSync(TMP_FILE, DB_FILE);
+}
+ 
+// ---- Password hashing (scrypt, no extra dependency needed) -----------
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+ 
+function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  const check = crypto.scryptSync(password, salt, 64).toString('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(check, 'hex'));
+  } catch {
+    return false;
   }
-
-  getUserByEmail(email: string) {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  }
-
-  getUserById(id: string) {
-    return this.data.users.find((u) => u.id === id);
-  }
-
-  verifyCredentials(email: string, pass: string): User | null {
-    const storedPass = this.data.credentials[email.toLowerCase()];
-    if (storedPass && storedPass === pass) {
-      return this.getUserByEmail(email) || null;
-    }
-    return null;
-  }
-
+}
+ 
+// ---- Normalization helper for certificate ID lookups ------------------
+function normalizeId(id: string): string {
+  return decodeURIComponent(String(id || '')).trim().toLowerCase();
+}
+ 
+export const db = {
+  saveData() {
+    persist();
+  },
+ 
+  // ---------------- Users -----------------
+  getUsers(): User[] {
+    return state.users;
+  },
+ 
+  getUserById(id: string): User | undefined {
+    return state.users.find((u) => u.id === id);
+  },
+ 
+  getUserByEmail(email: string): User | undefined {
+    const target = String(email || '').trim().toLowerCase();
+    return state.users.find((u) => u.email.trim().toLowerCase() === target);
+  },
+ 
   createUser(user: User, password?: string): User {
-    const existing = this.getUserByEmail(user.email);
-    if (existing) return existing;
-
-    this.data.users.push(user);
+    state.users.push(user);
     if (password) {
-      this.data.credentials[user.email.toLowerCase()] = password;
+      state.credentials[user.id] = hashPassword(password);
     }
-    this.addAuditLog(user.id, user.name, user.role, 'USER_REGISTERED', `User ${user.name} (${user.role}) registered account.`);
-    this.saveData();
+    persist();
     return user;
-  }
-
-  deleteUser(userId: string) {
-    const idx = this.data.users.findIndex((u) => u.id === userId);
-    if (idx !== -1) {
-      const u = this.data.users[idx];
-      this.data.users.splice(idx, 1);
-      delete this.data.credentials[u.email.toLowerCase()];
-      this.saveData();
+  },
+ 
+  deleteUser(id: string): boolean {
+    const before = state.users.length;
+    state.users = state.users.filter((u) => u.id !== id);
+    delete state.credentials[id];
+    persist();
+    return state.users.length < before;
+  },
+ 
+  verifyCredentials(email: string, password: string): User | null {
+    const user = this.getUserByEmail(email);
+    if (!user) return null;
+    const stored = state.credentials[user.id];
+    if (!stored) return null;
+    return verifyPassword(password, stored) ? user : null;
+  },
+ 
+  // ---------------- Certificates -----------------
+  getCertificates(filter: { studentId?: string; status?: string } = {}): CertificateItem[] {
+    return state.certificates.filter((c) => {
+      if (filter.studentId && c.studentId !== filter.studentId) return false;
+      if (filter.status && c.status !== filter.status) return false;
       return true;
-    }
-    return false;
-  }
-
-  // --- Certificates ---
-  getCertificates(filter?: { studentId?: string; status?: string }) {
-    let result = [...this.data.certificates];
-    if (filter?.studentId) {
-      result = result.filter((c) => c.studentId === filter.studentId);
-    }
-    if (filter?.status) {
-      result = result.filter((c) => c.status === filter.status);
-    }
-    return result;
-  }
-
-  getCertificateByCertId(certId: string) {
-    const cleanId = certId.trim().toUpperCase();
-    return this.data.certificates.find((c) => c.certificateId.toUpperCase() === cleanId || c.id === certId);
-  }
-
-  addCertificate(cert: CertificateItem) {
-    this.data.certificates.unshift(cert);
-    this.addAuditLog(
-      cert.studentId,
-      cert.studentName,
-      'student',
-      'CERTIFICATE_ADDED',
-      `Certificate ${cert.certificateId} (${cert.title}) added to vault.`
-    );
-    this.saveData();
-    return cert;
-  }
-
-  updateCertificateStatus(certId: string, status: CertificateItem['status'], reviewedBy: string, remarks?: string) {
-    const cert = this.data.certificates.find((c) => c.id === certId || c.certificateId === certId);
-    if (cert) {
-      cert.status = status;
-      cert.reviewedBy = reviewedBy;
-      cert.reviewedAt = new Date().toISOString();
-      if (remarks) cert.remarks = remarks;
-      this.saveData();
-      return cert;
-    }
-    return null;
-  }
-
-  togglePinCertificate(certId: string) {
-    const cert = this.data.certificates.find((c) => c.id === certId);
-    if (cert) {
-      cert.isPinned = !cert.isPinned;
-      this.saveData();
-      return cert;
-    }
-    return null;
-  }
-
-  deleteCertificate(certId: string, actor: User) {
-    const idx = this.data.certificates.findIndex((c) => c.id === certId || c.certificateId === certId);
-    if (idx !== -1) {
-      const deleted = this.data.certificates[idx];
-      this.data.certificates.splice(idx, 1);
-      this.addAuditLog(
-        actor.id,
-        actor.name,
-        actor.role,
-        'CERTIFICATE_DELETED',
-        `Permanent deletion of certificate ID ${deleted.certificateId} (${deleted.title})`
-      );
-      this.saveData();
-      return true;
-    }
-    return false;
-  }
-
-  // --- Requests ---
-  getRequests(filter?: { studentId?: string; status?: string }) {
-    let res = [...this.data.requests];
-    if (filter?.studentId) {
-      res = res.filter((r) => r.studentId === filter.studentId);
-    }
-    if (filter?.status) {
-      res = res.filter((r) => r.status === filter.status);
-    }
-    return res;
-  }
-
-  getRequestById(id: string) {
-    return this.data.requests.find((r) => r.id === id);
-  }
-
-  addRequest(req: CertificateRequest) {
-    this.data.requests.unshift(req);
-    this.addAuditLog(
-      req.studentId,
-      req.studentName,
-      'student',
-      'REQUEST_SUBMITTED',
-      `Submitted request for ${req.certificateType} certificate: "${req.title}".`
-    );
-
-    // Send notification to staff
-    const staffUsers = this.data.users.filter((u) => u.role === 'staff');
-    staffUsers.forEach((staff) => {
-      this.addNotification({
-        id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        userId: staff.id,
-        userRole: 'staff',
-        title: 'New Certificate Request',
-        message: `${req.studentName} requested a ${req.certificateType} certificate for "${req.title}".`,
-        type: 'info',
-        read: false,
-        actionLink: '/staff/pending-requests',
-        createdAt: new Date().toISOString()
-      });
     });
-
-    this.saveData();
-    return req;
-  }
-
+  },
+ 
+  // Looks up by EITHER the internal id (cert_...) OR the public certificateId
+  // (e.g. BAIT/AIW/2026/1234). Normalized so whitespace/case/url-encoding
+  // never causes a false "not found".
+  getCertificateByCertId(idOrCertId: string): CertificateItem | undefined {
+    const target = normalizeId(idOrCertId);
+    return state.certificates.find(
+      (c) => normalizeId(c.certificateId) === target || normalizeId(c.id) === target
+    );
+  },
+ 
+  addCertificate(cert: CertificateItem): CertificateItem {
+    state.certificates.push(cert);
+    persist();
+    return cert;
+  },
+ 
+  togglePinCertificate(id: string): CertificateItem | null {
+    const cert = this.getCertificateByCertId(id);
+    if (!cert) return null;
+    cert.isPinned = !cert.isPinned;
+    persist();
+    return cert;
+  },
+ 
+  deleteCertificate(id: string, _actor: User): boolean {
+    const before = state.certificates.length;
+    state.certificates = state.certificates.filter(
+      (c) => normalizeId(c.id) !== normalizeId(id) && normalizeId(c.certificateId) !== normalizeId(id)
+    );
+    const deleted = state.certificates.length < before;
+    if (deleted) persist();
+    return deleted;
+  },
+ 
+  // ---------------- Requests -----------------
+  getRequests(filter: { studentId?: string; status?: string } = {}): CertificateRequest[] {
+    return state.requests.filter((r) => {
+      if (filter.studentId && r.studentId !== filter.studentId) return false;
+      if (filter.status && r.status !== filter.status) return false;
+      return true;
+    });
+  },
+ 
+  getRequestById(id: string): CertificateRequest | undefined {
+    return state.requests.find((r) => r.id === id);
+  },
+ 
+  addRequest(request: CertificateRequest): CertificateRequest {
+    state.requests.push(request);
+    persist();
+    return request;
+  },
+ 
   updateRequestStatus(
-    requestId: string,
-    status: 'approved' | 'rejected',
+    id: string,
+    status: string,
     staff: User,
     remarks?: string,
-    generatedCertId?: string
-  ) {
-    const req = this.data.requests.find((r) => r.id === requestId);
-    if (!req) return null;
-
-    req.status = status;
-    req.remarks = remarks;
-    req.reviewedBy = staff.name;
-    req.reviewedAt = new Date().toISOString();
-    if (generatedCertId) {
-      req.certificateId = generatedCertId;
-    }
-
-    // Send notification to student
-    this.addNotification({
-      id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      userId: req.studentId,
-      userRole: 'student',
-      title: `Certificate Request ${status.toUpperCase()}`,
-      message:
-        status === 'approved'
-          ? `Your request for "${req.title}" has been approved! Certificate ID: ${generatedCertId}`
-          : `Your request for "${req.title}" was rejected. Reason: ${remarks || 'Invalid details'}`,
-      type: status === 'approved' ? 'success' : 'error',
-      read: false,
-      actionLink: status === 'approved' ? '/student/vault' : '/student/status',
-      createdAt: new Date().toISOString()
-    });
-
-    this.addAuditLog(
-      staff.id,
-      staff.name,
-      staff.role,
-      `REQUEST_${status.toUpperCase()}`,
-      `Staff ${staff.name} ${status} request ${req.id} for ${req.studentName}.`
-    );
-
-    this.saveData();
-    return req;
-  }
-
-  // --- Notifications ---
-  getNotifications(userId: string) {
-    return this.data.notifications.filter((n) => n.userId === userId);
-  }
-
-  addNotification(notif: NotificationItem) {
-    this.data.notifications.unshift(notif);
-    this.saveData();
-    return notif;
-  }
-
-  markNotificationRead(id: string, userId: string) {
-    const n = this.data.notifications.find((notif) => notif.id === id && notif.userId === userId);
-    if (n) {
-      n.read = true;
-      this.saveData();
-      return true;
-    }
-    return false;
-  }
-
-  markAllNotificationsRead(userId: string) {
-    let updated = false;
-    this.data.notifications.forEach((n) => {
+    certId?: string
+  ): CertificateRequest | undefined {
+    const request = this.getRequestById(id);
+    if (!request) return undefined;
+    (request as any).status = status;
+    (request as any).reviewedBy = staff.name;
+    (request as any).reviewedAt = new Date().toISOString();
+    if (remarks) (request as any).remarks = remarks;
+    if (certId) (request as any).certificateId = certId;
+    persist();
+    return request;
+  },
+ 
+  // ---------------- Notifications -----------------
+  getNotifications(userId: string): Notification[] {
+    return state.notifications
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+ 
+  addNotification(notification: Notification): Notification {
+    state.notifications.push(notification);
+    persist();
+    return notification;
+  },
+ 
+  markNotificationRead(id: string, userId: string): boolean {
+    const n = state.notifications.find((n) => n.id === id && n.userId === userId);
+    if (!n) return false;
+    n.read = true;
+    persist();
+    return true;
+  },
+ 
+  markAllNotificationsRead(userId: string): boolean {
+    let changed = false;
+    state.notifications.forEach((n) => {
       if (n.userId === userId && !n.read) {
         n.read = true;
-        updated = true;
+        changed = true;
       }
     });
-    if (updated) this.saveData();
-    return updated;
-  }
-
-  clearAllNotifications(userId: string) {
-    const initialCount = this.data.notifications.length;
-    this.data.notifications = this.data.notifications.filter((n) => n.userId !== userId);
-    if (this.data.notifications.length !== initialCount) {
-      this.saveData();
-      return true;
-    }
-    return false;
-  }
-
-  // --- Audit Logs ---
-  getAuditLogs() {
-    return this.data.auditLogs;
-  }
-
-  addAuditLog(userId: string, userName: string, userRole: User['role'], action: string, details: string) {
-    const log: AuditLogItem = {
+    if (changed) persist();
+    return true;
+  },
+ 
+  clearAllNotifications(userId: string): boolean {
+    const before = state.notifications.length;
+    state.notifications = state.notifications.filter((n) => n.userId !== userId);
+    if (state.notifications.length !== before) persist();
+    return true;
+  },
+ 
+  // ---------------- Audit logs -----------------
+  addAuditLog(userId: string, userName: string, userRole: string, action: string, message: string): AuditLog {
+    const entry: AuditLog = {
       id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       userId,
       userName,
       userRole,
       action,
-      details,
+      message,
       timestamp: new Date().toISOString()
     };
-    this.data.auditLogs.unshift(log);
-    // Limit to 500 logs
-    if (this.data.auditLogs.length > 500) {
-      this.data.auditLogs = this.data.auditLogs.slice(0, 500);
-    }
-    this.saveData();
-    return log;
+    state.auditLogs.push(entry);
+    persist();
+    return entry;
+  },
+ 
+  getAuditLogs(): AuditLog[] {
+    return state.auditLogs.slice().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
-}
-
-export const db = new DBManager();
+};

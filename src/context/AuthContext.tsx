@@ -10,6 +10,12 @@ interface AuthContextType {
   register: (details: { email: string; password?: string; name: string; role: Role; department?: string; registerNumber?: string }) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (details: { email: string; name: string; role: Role; department?: string; registerNumber?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  users: User[];
+  refreshUsers: () => Promise<void>;
+  addUser: (details: { name: string; email: string; password?: string; role: Role; department?: string; registerNumber?: string }) => Promise<void>;
+  updateUserRole: (userId: string, role: Role) => void;
+  toggleUserStatus: (userId: string) => void;
+  deleteUser: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     // Restore persistent session from localStorage
@@ -30,6 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refreshUsers();
   }, []);
 
   const login = async (email: string, pass: string) => {
@@ -92,6 +103,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUsers = async () => {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.users || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load users:', err);
+    }
+  };
+
+  const addUser = async (details: { name: string; email: string; password?: string; role: Role; department?: string; registerNumber?: string }) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(details)
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUsers((prev) => [...prev, data.user]);
+      }
+    } catch (err) {
+      console.warn('Failed to create user:', err);
+    }
+  };
+
+  const updateUserRole = (userId: string, role: Role) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
+  };
+
+  const toggleUserStatus = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' } : u
+      )
+    );
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (err) {
+      console.warn('Failed to delete user:', err);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('certifyx_user');
@@ -107,7 +167,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         loginWithGoogle,
-        logout
+        logout,
+        users,
+        refreshUsers,
+        addUser,
+        updateUserRole,
+        toggleUserStatus,
+        deleteUser
       }}
     >
       {children}

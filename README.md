@@ -8,7 +8,7 @@ A Digital Certificate Management and Verification System for educational institu
 
 ## 📂 GitHub Repository
 
-**Repository:** https://github.com/Vishnuvenkat-01/certifyx
+**Repository:** https://github.com/GowthamSenthilkumar-in/TriStack 
 
 ## 🔑 Demo Login Credentials
 

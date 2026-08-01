@@ -154,7 +154,7 @@ const AppContent: React.FC = () => {
               {activePath === '/student/status' && (
                 <StudentVerificationStatus onViewCert={(id) => setViewingCertId(id)} />
               )}
-              )}
+              
               {activePath === '/student/notifications' && <StudentNotifications />}
               {activePath === '/student/profile' && <StudentProfile />}
               {activePath === '/student/settings' && <StudentSettings />}

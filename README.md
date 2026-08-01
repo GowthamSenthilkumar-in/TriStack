@@ -8,12 +8,30 @@ A Digital Certificate Management and Verification System for educational institu
 
 ## 📂 GitHub Repository
 
-**Repository:** https://github.com/GowthamSenthilkumar-in/TriStack 
+**Repository:** https://github.com/Vishnuvenkat-01/certifyx
+
+## 🔑 Demo Login Credentials
+
+### 👨‍🎓 Student
+
+- **Email:** `student@gmail.com`
+- **Password:** `12345`
+
+### 👨‍🏫 Staff
+
+- **Email:** `gstaff@gmail.com`
+- **Password:** `1234`
+
+### 👨‍💼 Admin
+
+- **Email:** `admin@gmail.com`
+- **Password:** `12345`
 
 ## ✨ Features
 
 - Student Dashboard
 - Staff Dashboard
+- Admin Dashboard
 - Certificate Generation
 - Certificate Verification
 - QR Code Generation
@@ -63,7 +81,7 @@ npm install
 npm run dev
 ```
 
-5. Open your browser and visit:
+5. Open your browser:
 
 ```
 http://localhost:3000
@@ -78,4 +96,5 @@ To simplify certificate generation, issuance, and verification through a secure,
 Developed as a Hackathon Project.
 
 ---
-⭐ If you like this project, consider giving it a star on GitHub!
+
+⭐ If you found this project interesting, consider giving it a **Star ⭐** on GitHub!

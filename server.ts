@@ -103,13 +103,14 @@ async function startServer() {
   });
 
   // Certificates: Get single by Cert ID or UUID
-  app.get('/api/certificates/:id', (req, res) => {
-    const cert = db.getCertificateByCertId(req.params.id);
-    if (!cert) {
-      return res.status(404).json({ error: 'Certificate not found' });
-    }
-    res.json({ success: true, certificate: cert });
-  });
+app.get('/api/certificates/*', (req, res) => {
+  const rawId = (req.params as any)[0] ?? '';
+  const cert = db.getCertificateByCertId(decodeURIComponent(rawId));
+  if (!cert) {
+    return res.status(404).json({ error: 'Certificate not found' });
+  }
+  res.json({ success: true, certificate: cert });
+});
 
   // Certificates: Submit new certificate request (supports both endpoints)
   const handleCertificateRequest = (req: any, res: any) => {
@@ -460,14 +461,16 @@ async function startServer() {
   });
 
   // Public Certificate Verification URL API
-  app.get('/api/verify/:certificateId', (req, res) => {
-    const cert = db.getCertificateByCertId(req.params.certificateId);
-    if (!cert) {
-      return res.status(404).json({
-        isValid: false,
-        message: `Certificate ID "${req.params.certificateId}" could not be found in Bannari Amman Institute of Technology ledger.`
-      });
-    }
+  app.get('/api/verify/*', (req, res) => {
+  const rawId = (req.params as any)[0] ?? '';
+  const enteredId = decodeURIComponent(rawId);
+  const cert = db.getCertificateByCertId(enteredId);
+  if (!cert) {
+    return res.status(404).json({
+      isValid: false,
+      message: `Certificate ID "${enteredId}" could not be found in Bannari Amman Institute of Technology ledger.`
+    });
+  }
 
     return res.json({
       isValid: cert.status === 'verified',

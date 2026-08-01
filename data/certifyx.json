@@ -1,0 +1,138 @@
+{
+  "users": [
+    {
+      "id": "user_student_1",
+      "email": "student@gmail.com",
+      "name": "Student User",
+      "role": "student",
+      "department": "Computer Science and Engineering",
+      "registerNumber": "7376251CS194",
+      "createdAt": "2026-07-31T18:00:00.000Z"
+    },
+    {
+      "id": "user_staff_1",
+      "email": "staff@gmail.com",
+      "name": "Faculty Staff",
+      "role": "staff",
+      "department": "Computer Science and Engineering",
+      "createdAt": "2026-07-31T18:00:00.000Z"
+    },
+    {
+      "id": "user_admin_1",
+      "email": "admin@gmail.com",
+      "name": "System Admin",
+      "role": "admin",
+      "department": "Office of Academics",
+      "createdAt": "2026-07-31T18:00:00.000Z"
+    }
+  ],
+  "certificates": [],
+  "requests": [],
+  "notifications": [],
+  "auditLogs": [
+    {
+      "id": "log_1785525655310_rchz",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T19:20:55.310Z"
+    },
+    {
+      "id": "log_1785525053630_h2ta",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T19:10:53.630Z"
+    },
+    {
+      "id": "log_1785524919469_tllw",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T19:08:39.469Z"
+    },
+    {
+      "id": "log_1785524737340_rxi0",
+      "userId": "user_admin_1",
+      "userName": "System Admin",
+      "userRole": "admin",
+      "action": "USER_LOGIN",
+      "details": "Successful login for admin@gmail.com",
+      "timestamp": "2026-07-31T19:05:37.340Z"
+    },
+    {
+      "id": "log_1785524668881_w8w4",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T19:04:28.881Z"
+    },
+    {
+      "id": "log_1785524496442_oret",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T19:01:36.442Z"
+    },
+    {
+      "id": "log_1785524112457_90w1",
+      "userId": "user_admin_1",
+      "userName": "System Admin",
+      "userRole": "admin",
+      "action": "USER_LOGIN",
+      "details": "Successful login for admin@gmail.com",
+      "timestamp": "2026-07-31T18:55:12.457Z"
+    },
+    {
+      "id": "log_1785524079767_c2za",
+      "userId": "user_staff_1",
+      "userName": "Faculty Staff",
+      "userRole": "staff",
+      "action": "USER_LOGIN",
+      "details": "Successful login for staff@gmail.com",
+      "timestamp": "2026-07-31T18:54:39.767Z"
+    },
+    {
+      "id": "log_1785524006517_supu",
+      "userId": "user_student_1",
+      "userName": "Student User",
+      "userRole": "student",
+      "action": "USER_LOGIN",
+      "details": "Successful login for student@gmail.com",
+      "timestamp": "2026-07-31T18:53:26.517Z"
+    },
+    {
+      "id": "log_1785523980762_40hp",
+      "userId": "user_staff_1",
+      "userName": "Faculty Staff",
+      "userRole": "staff",
+      "action": "USER_LOGIN",
+      "details": "Successful login for staff@gmail.com",
+      "timestamp": "2026-07-31T18:53:00.762Z"
+    },
+    {
+      "id": "log_init",
+      "userId": "user_admin_1",
+      "userName": "System Admin",
+      "userRole": "admin",
+      "action": "SYSTEM_INITIALIZED",
+      "details": "CertifyX database initialized with clean vault.",
+      "timestamp": "2026-07-31T18:00:00.000Z"
+    }
+  ],
+  "credentials": {
+    "student@gmail.com": "12345",
+    "staff@gmail.com": "12345",
+    "admin@gmail.com": "12345"
+  }
+}

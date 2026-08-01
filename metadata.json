@@ -1,0 +1,6 @@
+{
+  "name": "CertifyX",
+  "description": "Digital certificate generation, verification, storage, and DigiLocker-style vault portal for educational institutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -298,12 +298,11 @@ export const db = {
   }
 };
 
-// ---- Ensure default demo accounts exist with correct credentials -----
-// Runs on every boot (not just when the DB is empty) so it can repair
-// stale/broken credential entries left over from earlier bugs, not just
-// create missing users from scratch.
-const DEFAULT_ACCOUNTS: { id: string; email: string; name: string; role: User['role']; department: string; password: string }[] = [
-  { id: 'user_student_1', email: 'student@gmail.com', name: 'Student User', role: 'student', department: 'Computer Science and Engineering', password: '12345' },
+// ---- Ensure default demo accounts exist with correct data -----------
+// Runs on every boot so it can repair stale/incomplete records left
+// over from earlier bugs, not just create missing users from scratch.
+const DEFAULT_ACCOUNTS: { id: string; email: string; name: string; role: User['role']; department: string; registerNumber?: string; password: string }[] = [
+  { id: 'user_student_1', email: 'student@gmail.com', name: 'Student User', role: 'student', department: 'Computer Science and Engineering', registerNumber: '7376251CS194', password: '12345' },
   { id: 'user_staff_1',   email: 'staff@gmail.com',   name: 'Faculty Staff', role: 'staff',   department: 'Computer Science and Engineering', password: '12345' },
   { id: 'user_admin_1',   email: 'admin@gmail.com',   name: 'System Admin',  role: 'admin',    department: 'Office of Academics',              password: '12345' },
 ];
@@ -314,10 +313,17 @@ for (const d of DEFAULT_ACCOUNTS) {
   let user = state.users.find((u) => u.email.trim().toLowerCase() === key);
 
   if (!user) {
-    user = { id: d.id, email: d.email, name: d.name, role: d.role, department: d.department, createdAt: new Date().toISOString() } as User;
+    user = { id: d.id, email: d.email, name: d.name, role: d.role, department: d.department, ...(d.registerNumber ? { registerNumber: d.registerNumber } : {}), createdAt: new Date().toISOString() } as User;
     state.users.push(user);
     didRepair = true;
     console.log(`[db] Created missing default user: ${d.email}`);
+  }
+
+  // Patch missing/incorrect fields on accounts that already exist
+  if (d.registerNumber && (user as any).registerNumber !== d.registerNumber) {
+    (user as any).registerNumber = d.registerNumber;
+    didRepair = true;
+    console.log(`[db] Fixed registerNumber for: ${d.email}`);
   }
 
   const hasWorkingCreds = !!state.credentials[key];

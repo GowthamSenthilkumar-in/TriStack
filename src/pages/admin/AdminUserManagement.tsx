@@ -147,7 +147,7 @@ export const AdminUserManagement: React.FC = () => {
               <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                 <td className="p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center shrink-0">
-                    {u.name.charAt(0)}
+                    {(u.name || '?').charAt(0)}
                   </div>
                   <div>
                     <div className="font-bold text-slate-900 dark:text-white text-sm">{u.name}</div>
@@ -174,13 +174,13 @@ export const AdminUserManagement: React.FC = () => {
                   <button
                     onClick={() => toggleUserStatus(u.id)}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${
-                      u.status === 'active'
+                      (u.status ?? 'active') === 'active'
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
                         : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
                     }`}
                   >
-                    {u.status === 'active' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                    {u.status.toUpperCase()}
+                    {(u.status ?? 'active') === 'active' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {(u.status ?? 'active').toUpperCase()}
                   </button>
                 </td>
                 <td className="p-3 text-right space-x-2">

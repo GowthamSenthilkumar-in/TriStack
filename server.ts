@@ -546,6 +546,7 @@ app.get('/api/certificates/*', (req, res) => {
       role,
       department: department || 'Computer Science and Engineering',
       registerNumber: role === 'student' ? registerNumber || '7376' + Math.floor(10000 + Math.random() * 90000) : undefined,
+      status: 'active',
       createdAt: new Date().toISOString()
     };
 

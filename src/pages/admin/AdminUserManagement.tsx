@@ -165,7 +165,7 @@ export const AdminUserManagement: React.FC = () => {
                     }`}
                   >
                     <Shield className="w-3 h-3" />
-                    {u.role}
+                    {u.role || 'unknown'}
                   </span>
                 </td>
                 <td className="p-3">{u.department}</td>
@@ -174,13 +174,13 @@ export const AdminUserManagement: React.FC = () => {
                   <button
                     onClick={() => toggleUserStatus(u.id)}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${
-                      (u.status ?? 'active') === 'active'
+                      (u.status || 'active') === 'active'
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
                         : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
                     }`}
                   >
-                    {(u.status ?? 'active') === 'active' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                    {(u.status ?? 'active').toUpperCase()}
+                    {(u.status || 'active') === 'active' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {String(u.status || 'active').toUpperCase()}
                   </button>
                 </td>
                 <td className="p-3 text-right space-x-2">

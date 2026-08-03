@@ -19,8 +19,8 @@ A Digital Certificate Management and Verification System for educational institu
 
 ### 👨‍🏫 Staff
 
-- **Email:** `gstaff@gmail.com`
-- **Password:** `1234`
+- **Email:** `staff@gmail.com`
+- **Password:** `12345`
 
 ### 👨‍💼 Admin
 

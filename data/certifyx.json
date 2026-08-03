@@ -7,7 +7,8 @@
       "role": "student",
       "department": "Computer Science and Engineering",
       "registerNumber": "7376251CS194",
-      "createdAt": "2026-07-31T18:00:00.000Z"
+      "createdAt": "2026-07-31T18:00:00.000Z",
+      "status": "active"
     },
     {
       "id": "user_staff_1",
@@ -15,7 +16,8 @@
       "name": "Faculty Staff",
       "role": "staff",
       "department": "Computer Science and Engineering",
-      "createdAt": "2026-07-31T18:00:00.000Z"
+      "createdAt": "2026-07-31T18:00:00.000Z",
+      "status": "active"
     },
     {
       "id": "user_admin_1",
@@ -23,7 +25,8 @@
       "name": "System Admin",
       "role": "admin",
       "department": "Office of Academics",
-      "createdAt": "2026-07-31T18:00:00.000Z"
+      "createdAt": "2026-07-31T18:00:00.000Z",
+      "status": "active"
     }
   ],
   "certificates": [],
